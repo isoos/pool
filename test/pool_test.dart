@@ -109,7 +109,7 @@ void main() {
     test("The Stream holds a resource until it is completed.", () async {
       var streamController = new StreamController<int>();
       var pool = new Pool(1);
-      pool.streamWithResource(() => streamController.stream);
+      pool.streamWithResource((_) => streamController.stream);
 
       bool nextTaskCompleted = false;
       pool.withResource(() {
@@ -131,7 +131,7 @@ void main() {
       });
       var pool = new Pool(1);
       StreamSubscription<int> subscription = pool
-          .streamWithResource(() => streamController.stream)
+          .streamWithResource((_) => streamController.stream)
           .listen(null);
 
       bool nextTaskCompleted = false;
@@ -152,7 +152,7 @@ void main() {
     test("Simple Stream example.", () async {
       var pool = new Pool(1);
       var result = await pool
-          .streamWithResource(() => new Stream.fromIterable([0, 1, 2]))
+          .streamWithResource((_) => new Stream.fromIterable([0, 1, 2]))
           .toList();
       expect(result, [0, 1, 2]);
     });
@@ -160,7 +160,7 @@ void main() {
     test("Callback returns null.", () async {
       var pool = new Pool(1);
       var resultFuture = pool
-          .streamWithResource(() => null)
+          .streamWithResource((_) => null)
           .toList();
 
       bool nextTaskCompleted = false;
@@ -181,7 +181,7 @@ void main() {
 
       bool callbackCalled = false;
       var resultFuture = pool
-          .streamWithResource(() {
+          .streamWithResource((_) {
             callbackCalled = true;
             return null;
           })

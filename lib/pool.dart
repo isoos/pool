@@ -124,7 +124,9 @@ class Pool {
   /// Requests a resource for the combined duration of the [callback] and the
   /// processing of the Stream it returns.
   /// (E.g. a database connection is hold until the the results get processed.)
-  Stream/*<T>*/ streamWithResource/*<T>*/(Stream/*<T>*/ callback()) {
+  Stream/*<T>*/ streamWithResource/*<T>*/(
+      Stream/*<T>*/ callback(Future onComplete)) {
+    Completer paramCompleter = new Completer();
     StreamController/*<T>*/ streamController;
     StreamSubscription/*<T>*/ streamSubscription;
     PoolResource poolResource;
@@ -140,6 +142,9 @@ class Pool {
       if (!streamController.isClosed) {
         streamController.close();
       }
+      if (!paramCompleter.isCompleted) {
+        paramCompleter.complete();
+      }
     };
     final completeWithError = (e, st) {
       if (!streamController.isClosed) {
@@ -154,7 +159,7 @@ class Pool {
     request().then((resource) {
       poolResource = resource;
       try {
-        Stream/*<T>*/ stream = callback();
+        Stream/*<T>*/ stream = callback(paramCompleter.future);
         if (stream == null) {
           complete();
           return null;
