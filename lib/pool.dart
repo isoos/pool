@@ -125,49 +125,28 @@ class Pool {
   /// processing of the Stream it returns.
   /// (E.g. a database connection is hold until the the results get processed.)
   Stream/*<T>*/ streamWithResource/*<T>*/(Stream/*<T>*/ callback()) {
-    StreamController/*<T>*/ streamController;
-    StreamSubscription/*<T>*/ streamSubscription;
+    StreamCompleter/*<T>*/ streamCompleter = new StreamCompleter/*<T>*/();
     PoolResource poolResource;
-    final complete = () {
-      if (streamSubscription != null) {
-        streamSubscription.cancel();
-        streamSubscription = null;
-      }
-      if (poolResource != null) {
-        poolResource.release();
-        poolResource = null;
-      }
-      if (!streamController.isClosed) {
-        streamController.close();
-      }
-    };
-    final completeWithError = (e, st) {
-      if (!streamController.isClosed) {
-        streamController.addError(e, st);
-      }
-      complete();
-    };
-    streamController = new StreamController/*<T>*/(
-        onCancel: complete,
-        onPause: () => streamSubscription?.pause(),
-        onResume: () => streamSubscription?.resume());
     request().then((resource) {
       poolResource = resource;
       try {
         Stream/*<T>*/ stream = callback();
         if (stream == null) {
-          complete();
+          streamCompleter.setEmpty();
+          poolResource.release();
           return null;
         }
-        streamSubscription = stream.listen(streamController.add,
-            onError: streamController.addError,
-            onDone: complete,
-            cancelOnError: true);
+        streamCompleter.setSourceStream(stream.transform(
+            new StreamTransformer.fromHandlers(handleDone: (sink) {
+              sink.close();
+              poolResource.release();
+            })));
       } catch (e, st) {
-        completeWithError(e, st);
+        streamCompleter.setError(e, st);
+        poolResource.release();
       }
-    }, onError: completeWithError);
-    return streamController.stream;
+    }, onError: streamCompleter.setError);
+    return streamCompleter.stream;
   }
 
   /// Closes the pool so that no more resources are requested.

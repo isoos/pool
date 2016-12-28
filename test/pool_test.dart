@@ -170,6 +170,7 @@ void main() {
 
       expect(nextTaskCompleted, isFalse);
       var result = await resultFuture;
+      await new Future.delayed(new Duration());
       expect(nextTaskCompleted, isTrue);
       expect(result, []);
     });
